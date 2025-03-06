@@ -15,6 +15,7 @@ from pathlib import Path
 
 import dj_database_url
 from decouple import config, Csv
+from kombu import Queue
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -166,4 +167,40 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+
+CELERY_BROKER_URL = config("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND")
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+CELERY_TIMEZONE = 'America/Sao_Paulo'
+CELERY_ENABLE_UTC = False
+
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'visibility_timeout': 3600,
+    'confirm_publish': True,
+}
+
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_TASK_QUEUES = (
+    Queue('data_anonymizer', routing_key='data_anonymizer'),
+)
+
+CELERY_TASK_DEFAULT_QUEUE = 'data_anonymizer'
+
+CELERY_TASK_ROUTES = {
+    'anonymizer.tasks.process_file': {'queue': 'data_anonymizer'},
+    'anonymizer.tasks.clean_old_data': {'queue': 'data_anonymizer'},
+}
+
+CELERY_ONCE = {
+    'backend': 'celery_once.backends.Redis',
+    'settings': {
+        'url': config("CELERY_RESULT_BACKEND"),
+        'default_timeout': 60 * 60,  # Timeout de 1 hora
+    }
 }
